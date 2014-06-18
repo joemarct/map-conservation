@@ -62,7 +62,7 @@ alignment and remove odd sequences, if necessary. You may use Jalview for this
     <ol>
         <li>Put the structure.pdb and input_alignment.fasta file into a single folder / directory.</li>
         <li>Open Terminal, change directory to the working folder with the following command:
-            <ul><li>cd <path_to_the_directory></li></ul>
+            <ul><li>cd [path_to_the_directory]</li></ul>
         </li>
         <li>Execute the conservation mapping script by issuing the following command:
             <ul><li>map_conservation.py</ul></li>
