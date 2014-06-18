@@ -2,7 +2,7 @@
 
 from setuptools import setup
 
-setup(name='conservation_mapping',
+setup(name='map-conservation',
       version='1.0',
       description='Mapping of residue conservation scores into structure',
       author='Joemar Taganna',
