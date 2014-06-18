@@ -1,0 +1,152 @@
+#######################################################################################
+# Conservation mapping script for Pymol
+# Author: Joemar Taganna
+#
+# Usage:
+# Run this script within Pymol by executing the following command in the Pymol shell:
+# PyMOL> run <give_the_path_to_this_script>
+# PyMOL> map_residue_conservation
+#######################################################################################
+
+from pymol import cmd, stored
+
+
+# Path to temporary files
+script_path = os.path.realpath(__file__)
+aln_file = os.path.join(os.path.split(script_path)[0], 'sequences_plus_structure_alignment.fasta')
+pdb_file = os.path.join(os.path.split(script_path)[0], structure_name + '.pdb')
+scores_file = os.path.join(os.path.split(script_path)[0], 'conservation_scores.txt')
+
+
+def write_pdb():
+    pdb_out = open(pdb_file, 'w')
+    pdb_out.write(pdb_string)
+    pdb_out.close()
+    return pdb_file
+    
+
+def write_alignment_and_scores():
+    aln_out = open(aln_file, 'w')
+    aln_out.write(aln_string)
+    aln_out.close()
+    scores_out = open(scores_file, 'w')
+    scores_out.write(conservation_scores)
+    scores_out.close()
+    input_dict = {
+        'aln_file': aln_file, 
+        'conservation_scores': scores_file,
+        'pymol_name': structure_name, 
+        'seq_name': structure_name
+    }
+    return [input_dict]
+    
+
+def read_conservation_scores(scores_file):
+    scores = open(scores_file, 'r').readlines()
+    scores = scores[3:]
+    scores_mapping = {}
+    for score in scores:
+        p, s = score.split()[:2]
+        scores_mapping[int(p)+1] = s
+    return scores_mapping
+        
+
+def process_data(aln_file, seq_name, conservation_scores):
+    """
+    Reads the multiple sequence alignment file per column, 
+    computes the probability of occurrence of residues in each,
+    then stores the data into a dictionary
+    """
+    # Read the alignment file
+    aln = open(aln_file, 'r')
+    aln = aln.read()
+    aln = [x for x in aln.split('>') if x]
+    # Store the alignment data in a dictionary
+    aln_dict = {}
+    for seq in aln:
+        name = seq.split()[0]
+        if '/' in name:
+            name = name.split('/')[0]
+        seq_string = ''.join(seq.split('\n')[1:])
+        aln_dict[name] = seq_string 
+    # Compute residue probabilities based on a
+    # gapless alignment of the sequence of interest
+    cons_scores = read_conservation_scores(conservation_scores)
+    prob_data = {}
+    count = 0
+    for i, aa in enumerate(aln_dict[seq_name]):
+        if aa is not '-':
+            count += 1
+            try:
+                prob_data[count] = cons_scores[i+1]
+            except KeyError:
+                pass
+    return prob_data
+    
+
+def _map_one_structure(aln_file, seq_name, cons_scores, pymol_name, spectrum=None, verbose=False):
+    if pymol_name not in cmd.get_names(enabled_only=1):
+        pymol_name = 'all'
+    # Load data
+    data = process_data(aln_file, seq_name, cons_scores)
+    if verbose:
+        print '\nConservation scores:\n'
+        k = data.keys()
+        k.sort()
+        for x in k:
+            print x, '==>', data[x]
+    # Compute variability and set color of residues
+    cmd.alter(pymol_name, 'b=0.0')
+    
+    rescount = 0
+    stored.list = []
+    
+    def store_to_list(item):
+        if item not in stored.list:
+            stored.list.append(item)
+    
+    ns = {'store_to_list': store_to_list}
+    cmd.iterate('(%s)' % pymol_name, 'store_to_list((resi,resn))', space=ns)
+    rescount = 0
+    for resi, resn in stored.list:
+        if rescount < len(data):
+            rescount += 1
+            selection = 'resi %s and %s' % (int(resi), pymol_name)
+            cmd.alter(selection, 'b+=%s' % str(float(data[rescount]) * 100))
+
+    cmd.spectrum('b', spectrum, '(%s)' % pymol_name)        
+    print 'Mapped: %s' % pymol_name
+    
+
+def map_residue_conservation(spectrum='yellow_white_blue', verbose=True):
+    """
+    Maps the residue probabilities into the structure coloring them based
+    on spectrum color scheme selected
+    """
+    for input in inputs:
+        
+        _map_one_structure(
+            input['aln_file'], 
+            input['seq_name'], 
+            input['conservation_scores'], 
+            input['pymol_name'], 
+            spectrum=spectrum,
+            verbose=verbose)
+    
+    # Remove the temporary files generated
+    os.remove(pdb_file)
+    os.remove(aln_file)
+    os.remove(scores_file)
+    
+
+# Generate the inputs dictionary
+inputs = write_alignment_and_scores()
+
+# Load the PDB file
+cmd.load(write_pdb())
+
+# Create a Pymol extension command manual execution
+cmd.extend("map_residue_conservation", map_residue_conservation)
+
+# Execute mapping
+map_residue_conservation()
