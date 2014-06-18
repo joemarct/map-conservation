@@ -12,6 +12,6 @@ setup(name='conservation_mapping',
       data_files=[('src/map-conservation', ['conservation_mapping_script_base.txt'])],
       setup_requires=['score-conservation'],
       dependency_links=[
-          'git+https://github.com/joemarct/score-conservation.git#egg=score-conservation-1.0'
+          'git+https://github.com/joemarct/score-conservation.git'
       ]
      )
