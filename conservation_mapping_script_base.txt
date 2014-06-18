@@ -85,8 +85,8 @@ def process_data(aln_file, seq_name, conservation_scores):
     
 
 def _map_one_structure(aln_file, seq_name, cons_scores, pymol_name, spectrum=None, verbose=False):
-    if pymol_name not in cmd.get_names(enabled_only=1):
-        pymol_name = 'all'
+    # Get the PyMOL name of the lone structure in this opened session
+    pymol_name = cmd.get_names(enabled_only=1)[0]
     # Load data
     data = process_data(aln_file, seq_name, cons_scores)
     if verbose:
